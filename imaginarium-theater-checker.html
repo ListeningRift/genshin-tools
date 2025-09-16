@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+  <meta charset="UTF-8">
+  <title>元素数值组合分析器 (自定义目标版)</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.1);
+      pointer-events: none;
+    }
+
+    h2 {
+      text-align: center;
+      color: #333;
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+      font-weight: 300;
+      position: relative;
+      z-index: 1;
+    }
+
+    p {
+      text-align: center;
+      color: #666;
+      margin-bottom: 25px;
+      font-size: 1.1rem;
+      opacity: 0.9;
+      position: relative;
+      z-index: 1;
+    }
+
+    .settings-container {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 25px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 15px;
+      border: 2px solid rgba(102, 126, 234, 0.1);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      position: relative;
+      z-index: 1;
+    }
+
+    .settings-container label {
+      font-weight: 600;
+      font-size: 1.2em;
+      margin-right: 15px;
+      color: #333;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+
+    .settings-container input {
+      width: 100px;
+      padding: 12px 15px;
+      border: 2px solid #e0e6ed;
+      border-radius: 10px;
+      font-size: 1.1em;
+      text-align: center;
+      transition: all 0.3s ease;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .settings-container input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      transform: scale(1.02);
+    }
+
+    hr {
+      border: none;
+      border-top: 2px solid rgba(102, 126, 234, 0.1);
+      margin: 30px 0;
+      border-radius: 2px;
+    }
+
+    #input-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 15px;
+      border: 2px solid rgba(102, 126, 234, 0.1);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .input-group::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+      transition: left 0.5s;
+    }
+
+    .input-group:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      border-color: #667eea;
+    }
+
+    .input-group:hover::before {
+      left: 100%;
+    }
+
+    .input-group label {
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #333;
+      font-size: 1.1em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .input-group input {
+      padding: 12px 15px;
+      border: 2px solid #e0e6ed;
+      border-radius: 10px;
+      font-size: 1em;
+      text-align: center;
+      margin-bottom: 10px;
+      transition: all 0.3s ease;
+      background: white;
+      position: relative;
+      z-index: 1;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      transform: scale(1.02);
+    }
+
+    .input-group input:last-child {
+      margin-bottom: 0;
+    }
+
+    .input-group .max-input {
+      background: linear-gradient(135deg, #fff3cd 0%, #fff8e1 100%);
+      border-color: #ffc107;
+    }
+
+    .input-group .max-input:focus {
+      border-color: #ff9800;
+      box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.1);
+    }
+
+    .input-group .max-label {
+      font-size: 0.9em;
+      color: #666;
+      font-weight: 500;
+      margin-top: 5px;
+      position: relative;
+      z-index: 1;
+    }
+
+    button {
+      display: block;
+      width: 100%;
+      padding: 15px 20px;
+      font-size: 1.2em;
+      font-weight: 600;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+      position: relative;
+      z-index: 1;
+      margin-bottom: 20px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    #result-list {
+      margin-top: 30px;
+      padding: 0;
+      list-style-type: none;
+      max-height: 500px;
+      overflow-y: auto;
+      border: none;
+      border-radius: 15px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(5px);
+      position: relative;
+      z-index: 1;
+    }
+
+    #result-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #result-list::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 4px;
+    }
+
+    #result-list::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 4px;
+    }
+
+    #result-list::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, #5a6fd8, #6c42a0);
+    }
+
+    #result-list li {
+      padding: 15px 20px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 10px;
+      margin-bottom: 10px;
+      transition: all 0.3s ease;
+      position: relative;
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    #result-list li:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+
+    #result-list li:hover {
+      transform: translateX(5px);
+      background: rgba(255, 255, 255, 0.8);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .success {
+      color: #28a745;
+      background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(40, 167, 69, 0.05));
+      border-left: 4px solid #28a745;
+    }
+
+    .failure {
+      color: #dc3545;
+      background: linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(220, 53, 69, 0.05));
+      border-left: 4px solid #dc3545;
+    }
+
+    .analysis-section {
+      margin-top: 30px;
+      padding: 25px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 15px;
+      border: 2px solid rgba(102, 126, 234, 0.1);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(5px);
+      position: relative;
+      z-index: 1;
+    }
+
+    .analysis-section h3 {
+      margin-top: 0;
+      color: #333;
+      font-size: 1.4em;
+      font-weight: 600;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+    }
+
+    .analysis-section h4 {
+      color: #495057;
+      font-size: 1.2em;
+      font-weight: 600;
+      margin: 20px 0 15px 0;
+    }
+
+    .frequency-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .frequency-table th,
+    .frequency-table td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .frequency-table th {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      font-weight: 600;
+      font-size: 0.95em;
+    }
+
+    .frequency-table tbody tr:hover {
+      background: rgba(102, 126, 234, 0.05);
+      transform: scale(1.01);
+      transition: all 0.3s ease;
+    }
+
+    .optimization-suggestion {
+      margin-top: 20px;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(209, 236, 241, 0.8), rgba(209, 236, 241, 0.6));
+      border: 2px solid rgba(190, 229, 235, 0.8);
+      border-radius: 15px;
+      color: #0c5460;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .optimization-suggestion::before {
+      content: '💡';
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      font-size: 1.5em;
+      opacity: 0.3;
+    }
+
+    .optimization-suggestion strong {
+      color: #004085;
+      font-weight: 600;
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+      .container {
+        padding: 25px 20px;
+        margin: 10px;
+      }
+
+      h2 {
+        font-size: 2rem;
+      }
+
+      #input-container {
+        grid-template-columns: 1fr;
+        gap: 15px;
+      }
+
+      .input-group {
+        padding: 15px;
+      }
+
+      .settings-container {
+        padding: 20px 15px;
+      }
+
+      .frequency-table th,
+      .frequency-table td {
+        padding: 8px 10px;
+        font-size: 0.9em;
+      }
+    }
+
+    /* 动画效果 */
+    .animate-fade-in {
+      animation: fadeIn 0.6s ease-out forwards;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-slide-in {
+      animation: slideIn 0.5s ease-out forwards;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    /* 加载动画 */
+    .loading {
+      position: relative;
+    }
+
+    .loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      margin: -10px 0 0 -10px;
+      border: 2px solid #667eea;
+      border-top: 2px solid transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container animate-fade-in">
+    <h2>🎭 元素数值组合分析器</h2>
+
+    <div class="settings-container">
+      <label for="target-sum-input">🎯 设置目标和值:</label>
+      <input type="number" id="target-sum-input" value="28" oninput="saveToCache()">
+    </div>
+
+    <hr>
+
+    <p>请为 <strong>💧水, 🔥火, ⚡雷, 🌪️风, 🗿岩, 🌿草, ❄️冰</strong> 七个元素分别输入当前值和最大值（可选）：</p>
+    <div id="input-container">
+    </div>
+
+    <button onclick="generateReport()">📊 生成详细报告</button>
+
+    <div style="text-align: center; margin: 20px 0;">
+      <a href="index.html" style="
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.8);
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        border-radius: 25px;
+        text-decoration: none;
+        color: #667eea;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(5px);
+      " onmouseover="this.style.background='rgba(102, 126, 234, 0.1)'; this.style.transform='translateY(-2px)'"
+        onmouseout="this.style.background='rgba(255, 255, 255, 0.8)'; this.style.transform='translateY(0)'">
+        🏠 返回首页
+      </a>
+    </div>
+
+    <ul id="result-list"></ul>
+
+    <div id="analysis-container"></div>
+  </div>
+
+  <script>
+    const identifiers = ['💧水', '🔥火', '⚡雷', '🌪️风', '🗿岩', '🌿草', '❄️冰'];
+    const elementNames = ['水', '火', '雷', '风', '岩', '草', '冰'];
+    const defaultValues = [0, 0, 0, 0, 0, 0, 0];
+    const inputContainer = document.getElementById('input-container');
+
+    // 页面加载动画
+    document.addEventListener('DOMContentLoaded', function () {
+      // 为输入组添加延迟动画
+      setTimeout(() => {
+        const inputGroups = document.querySelectorAll('.input-group');
+        inputGroups.forEach((group, index) => {
+          group.style.animationDelay = `${index * 0.1}s`;
+          group.classList.add('animate-fade-in');
+        });
+      }, 300);
+    });
+
+    // 本地缓存相关函数
+    function saveToCache() {
+      const data = {
+        targetSum: document.getElementById('target-sum-input').value,
+        elements: {},
+        maxElements: {}
+      };
+
+      identifiers.forEach((name, index) => {
+        const input = document.getElementById(`element-${index}`);
+        const maxInput = document.getElementById(`element-max-${index}`);
+        data.elements[elementNames[index]] = input.value;
+        data.maxElements[elementNames[index]] = maxInput.value;
+      });
+
+      localStorage.setItem('elementAnalyzerData', JSON.stringify(data));
+    }
+
+    function loadFromCache() {
+      const cached = localStorage.getItem('elementAnalyzerData');
+      if (cached) {
+        try {
+          const data = JSON.parse(cached);
+
+          // 恢复目标和值
+          if (data.targetSum) {
+            document.getElementById('target-sum-input').value = data.targetSum;
+          }
+
+          // 恢复元素值
+          identifiers.forEach((name, index) => {
+            const input = document.getElementById(`element-${index}`);
+            const maxInput = document.getElementById(`element-max-${index}`);
+
+            if (data.elements && data.elements[elementNames[index]]) {
+              input.value = data.elements[elementNames[index]];
+            }
+
+            if (data.maxElements && data.maxElements[elementNames[index]]) {
+              maxInput.value = data.maxElements[elementNames[index]];
+            }
+          });
+        } catch (e) {
+          console.log('缓存数据格式错误，使用默认值');
+        }
+      }
+    }
+
+    // 动态生成七个元素的输入框
+    identifiers.forEach((name, index) => {
+      const group = document.createElement('div');
+      group.className = 'input-group';
+
+      const label = document.createElement('label');
+      label.htmlFor = `element-${index}`;
+      label.textContent = `${name}:`;
+
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.id = `element-${index}`;
+      input.className = 'element-input';
+      input.value = defaultValues[index];
+      input.placeholder = '当前值';
+      // 添加输入事件监听器
+      input.addEventListener('input', saveToCache);
+
+      const maxLabel = document.createElement('label');
+      maxLabel.className = 'max-label';
+      maxLabel.htmlFor = `element-max-${index}`;
+      maxLabel.textContent = '最大值（可选）:';
+
+      const maxInput = document.createElement('input');
+      maxInput.type = 'number';
+      maxInput.id = `element-max-${index}`;
+      maxInput.className = 'element-max-input max-input';
+      maxInput.placeholder = '不限制';
+      // 添加输入事件监听器
+      maxInput.addEventListener('input', saveToCache);
+
+      group.appendChild(label);
+      group.appendChild(input);
+      group.appendChild(maxLabel);
+      group.appendChild(maxInput);
+      inputContainer.appendChild(group);
+    });
+
+    // 页面加载时恢复缓存数据
+    window.addEventListener('DOMContentLoaded', loadFromCache);
+
+    function generateReport() {
+      // 添加加载动画
+      const button = document.querySelector('button');
+      const originalText = button.textContent;
+      button.textContent = '生成中...';
+      button.classList.add('loading');
+      button.disabled = true;
+
+      // 使用setTimeout让动画有时间显示
+      setTimeout(() => {
+        try {
+          performAnalysis();
+        } finally {
+          // 移除加载状态
+          button.textContent = originalText;
+          button.classList.remove('loading');
+          button.disabled = false;
+        }
+      }, 100);
+    }
+
+    function performAnalysis() {
+      // 1. 读取自定义的目标和值
+      const targetInput = document.getElementById('target-sum-input');
+      const target = parseInt(targetInput.value, 10);
+
+      const resultList = document.getElementById('result-list');
+      resultList.innerHTML = ''; // 清空上次结果
+
+      const analysisContainer = document.getElementById('analysis-container');
+      analysisContainer.innerHTML = ''; // 清空上次分析结果
+
+      // 2. 验证目标和值是否有效
+      if (isNaN(target)) {
+        const li = document.createElement('li');
+        li.className = 'failure';
+        li.textContent = '输入无效，请确保"目标和值"是一个有效的数字。';
+        resultList.appendChild(li);
+        return;
+      }
+
+      // 3. 读取七个元素的数值和最大值
+      const inputElements = document.querySelectorAll('.element-input');
+      const maxInputElements = document.querySelectorAll('.element-max-input');
+      const numbers = Array.from(inputElements).map(input => parseInt(input.value, 10));
+      const maxValues = Array.from(maxInputElements).map(input => {
+        const val = parseInt(input.value, 10);
+        return isNaN(val) ? null : val;
+      });
+
+      // 4. 验证元素数值是否有效
+      if (numbers.some(isNaN)) {
+        const li = document.createElement('li');
+        li.className = 'failure';
+        li.textContent = '输入无效，请确保所有元素的输入框都填写了有效的数字。';
+        resultList.appendChild(li);
+        return;
+      }
+
+      // 验证最大值是否大于等于当前值
+      for (let i = 0; i < numbers.length; i++) {
+        if (maxValues[i] !== null && maxValues[i] < numbers[i]) {
+          const li = document.createElement('li');
+          li.className = 'failure';
+          li.textContent = `输入无效：${identifiers[i]}的最大值(${maxValues[i]})不能小于当前值(${numbers[i]})。`;
+          resultList.appendChild(li);
+          return;
+        }
+      }
+
+      const elements = numbers.map((value, index) => ({
+        name: elementNames[index],
+        displayName: identifiers[index],
+        value: value,
+        maxValue: maxValues[index]
+      }));
+
+      const failedCombinations = [];
+      const elementFailureCount = {};
+      const elementTotalCount = {};
+
+      // 初始化元素失败计数和总出现次数
+      elementNames.forEach(name => {
+        elementFailureCount[name] = 0;
+        elementTotalCount[name] = 0;
+      });
+
+      // 收集所有组合
+      const allCombinations = [];
+
+      // 5. 遍历所有组合
+      for (let i = 0; i < elements.length - 2; i++) {
+        for (let j = i + 1; j < elements.length - 1; j++) {
+          for (let k = j + 1; k < elements.length; k++) {
+            const elem1 = elements[i];
+            const elem2 = elements[j];
+            const elem3 = elements[k];
+
+            allCombinations.push({
+              elements: [elem1, elem2, elem3],
+              sum: elem1.value + elem2.value + elem3.value
+            });
+          }
+        }
+      }
+
+      // 判断组合是否包含特定元素对
+      function hasSpecialPair(combo) {
+        const names = combo.elements.map(e => e.name);
+        return (names.includes('风') && names.includes('岩')) ||
+          (names.includes('风') && names.includes('草')) ||
+          (names.includes('岩') && names.includes('草'));
+      }
+
+      // 分离普通组合和特殊组合
+      const normalCombinations = [];
+      const specialCombinations = [];
+
+      allCombinations.forEach(combo => {
+        if (hasSpecialPair(combo)) {
+          specialCombinations.push(combo);
+        } else {
+          normalCombinations.push(combo);
+        }
+      });
+
+      // 用于第一份报告（不包含特殊组合）的统计
+      const failedCombinationsNormal = [];
+      const elementFailureCountNormal = {};
+      const elementTotalCountNormal = {};
+      elementNames.forEach(name => {
+        elementFailureCountNormal[name] = 0;
+        elementTotalCountNormal[name] = 0;
+      });
+
+      // 生成报告
+      let combinationsCount = 0;
+
+      // 先显示普通组合
+      normalCombinations.forEach(combo => {
+        combinationsCount++;
+        const elem1 = combo.elements[0];
+        const elem2 = combo.elements[1];
+        const elem3 = combo.elements[2];
+        const sum = combo.sum;
+
+        // 统计元素总出现次数（两份统计）
+        elementTotalCount[elem1.name]++;
+        elementTotalCount[elem2.name]++;
+        elementTotalCount[elem3.name]++;
+        elementTotalCountNormal[elem1.name]++;
+        elementTotalCountNormal[elem2.name]++;
+        elementTotalCountNormal[elem3.name]++;
+
+        const li = document.createElement('li');
+        let text = `${combinationsCount}. ${elem1.displayName}(${elem1.value}) + ${elem2.displayName}(${elem2.value}) + ${elem3.displayName}(${elem3.value}) = <strong>${sum}</strong>. `;
+
+        // 使用动态读取的 target 值进行判断
+        if (sum >= target) {
+          li.className = 'success';
+          text += `✅ 能`;
+        } else {
+          const deficit = target - sum;
+          li.className = 'failure';
+          text += `❌ 不能 (需要加 ${deficit})`;
+
+          // 记录失败的组合（两份统计）
+          failedCombinations.push({
+            elements: [elem1, elem2, elem3],
+            sum: sum,
+            deficit: deficit
+          });
+          failedCombinationsNormal.push({
+            elements: [elem1, elem2, elem3],
+            sum: sum,
+            deficit: deficit
+          });
+
+          // 统计失败组合中各元素出现次数（两份统计）
+          elementFailureCount[elem1.name]++;
+          elementFailureCount[elem2.name]++;
+          elementFailureCount[elem3.name]++;
+          elementFailureCountNormal[elem1.name]++;
+          elementFailureCountNormal[elem2.name]++;
+          elementFailureCountNormal[elem3.name]++;
+        }
+
+        li.innerHTML = text;
+        li.classList.add('animate-slide-in');
+        li.style.animationDelay = `${(combinationsCount - 1) * 0.05}s`;
+        resultList.appendChild(li);
+      });
+
+      // 添加分界线
+      if (specialCombinations.length > 0) {
+        const divider = document.createElement('li');
+        divider.style.borderTop = '3px solid #dc3545';
+        divider.style.borderBottom = '3px solid #dc3545';
+        divider.style.padding = '12px 5px';
+        divider.style.margin = '10px 0';
+        divider.style.backgroundColor = '#fff3cd';
+        divider.style.fontWeight = 'bold';
+        divider.style.textAlign = 'center';
+        divider.innerHTML = '⚠️ 以下是包含风岩、风草、岩草的特殊组合 ⚠️';
+        resultList.appendChild(divider);
+      }
+
+      // 显示特殊组合
+      specialCombinations.forEach(combo => {
+        combinationsCount++;
+        const elem1 = combo.elements[0];
+        const elem2 = combo.elements[1];
+        const elem3 = combo.elements[2];
+        const sum = combo.sum;
+
+        // 统计元素总出现次数（只记录到总统计）
+        elementTotalCount[elem1.name]++;
+        elementTotalCount[elem2.name]++;
+        elementTotalCount[elem3.name]++;
+
+        const li = document.createElement('li');
+        let text = `${combinationsCount}. ${elem1.displayName}(${elem1.value}) + ${elem2.displayName}(${elem2.value}) + ${elem3.displayName}(${elem3.value}) = <strong>${sum}</strong>. `;
+
+        // 使用动态读取的 target 值进行判断
+        if (sum >= target) {
+          li.className = 'success';
+          text += `✅ 能`;
+        } else {
+          const deficit = target - sum;
+          li.className = 'failure';
+          text += `❌ 不能 (需要加 ${deficit})`;
+
+          // 记录失败的组合（只记录到总统计）
+          failedCombinations.push({
+            elements: [elem1, elem2, elem3],
+            sum: sum,
+            deficit: deficit
+          });
+
+          // 统计失败组合中各元素出现次数（只记录到总统计）
+          elementFailureCount[elem1.name]++;
+          elementFailureCount[elem2.name]++;
+          elementFailureCount[elem3.name]++;
+        }
+
+        li.innerHTML = text;
+        li.classList.add('animate-slide-in');
+        li.style.animationDelay = `${(combinationsCount - 1) * 0.05}s`;
+        resultList.appendChild(li);
+      });
+
+      // 生成两份分析报告
+      if (failedCombinationsNormal.length > 0) {
+        // 第一份：不包含特殊组合的分析
+        generateAnalysis(elements, failedCombinationsNormal, elementFailureCountNormal, elementTotalCountNormal, target, '（不含风岩、风草、岩草组合）');
+      }
+
+      if (failedCombinations.length > 0 && specialCombinations.length > 0) {
+        // 第二份：包含所有组合的分析
+        generateAnalysis(elements, failedCombinations, elementFailureCount, elementTotalCount, target, '（包含所有组合）');
+      }
+    }
+
+    function generateAnalysis(elements, failedCombinations, elementFailureCount, elementTotalCount, target, reportType = '') {
+      const analysisContainer = document.getElementById('analysis-container');
+
+      // 创建分析区域
+      const analysisSection = document.createElement('div');
+      analysisSection.className = 'analysis-section';
+
+      // 添加标题
+      const title = document.createElement('h3');
+      title.textContent = `📊 失败组合分析报告 ${reportType}`;
+      analysisSection.appendChild(title);
+
+      // 1. 元素失败比例统计
+      const freqTitle = document.createElement('h4');
+      freqTitle.textContent = '1. 元素失败比例分析：';
+      analysisSection.appendChild(freqTitle);
+
+      // 创建频率表格
+      const table = document.createElement('table');
+      table.className = 'frequency-table';
+
+      const thead = document.createElement('thead');
+      thead.innerHTML = '<tr><th>元素</th><th>当前值</th><th>总出现次数</th><th>失败次数</th><th>失败比例</th><th>失败比例排名</th></tr>';
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+
+      // 计算失败比例并按失败比例排序
+      const elementStats = Object.entries(elementFailureCount)
+        .map(entry => {
+          const name = entry[0];
+          const failureCount = entry[1];
+          const totalCount = elementTotalCount[name];
+          const failureRatio = totalCount > 0 ? (failureCount / totalCount) : 0;
+          return {
+            name: name,
+            failureCount: failureCount,
+            totalCount: totalCount,
+            failureRatio: failureRatio,
+            value: elements.find(e => e.name === name).value
+          };
+        })
+        .sort((a, b) => b.failureRatio - a.failureRatio)
+        .map((elem, index) => ({
+          ...elem,
+          rank: index + 1
+        }));
+
+      const sortedElements = elementStats;
+
+      sortedElements.forEach(elem => {
+        const row = document.createElement('tr');
+        if (elem.rank === 1) {
+          row.style.backgroundColor = '#fff3cd';
+        }
+        const percentageStr = (elem.failureRatio * 100).toFixed(1);
+        row.innerHTML = `
+          <td><strong>${elem.name}</strong></td>
+          <td>${elem.value}</td>
+          <td>${elem.totalCount}</td>
+          <td>${elem.failureCount}</td>
+          <td>${percentageStr}%</td>
+          <td>${elem.rank === 1 ? '🥇 第一' : elem.rank === 2 ? '🥈 第二' : elem.rank === 3 ? '🥉 第三' : `第${elem.rank}`}</td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      table.appendChild(tbody);
+      analysisSection.appendChild(table);
+
+      // 2. 最优化建议
+      const optTitle = document.createElement('h4');
+      optTitle.textContent = '2. 性价比最优方案：';
+      analysisSection.appendChild(optTitle);
+
+      // 使用改进的最小增加值优化算法
+      function findOptimalSolution() {
+        // 复制当前元素值和最大值限制
+        const currentValues = {};
+        const maxLimits = {};
+        elements.forEach(e => {
+          currentValues[e.name] = e.value;
+          maxLimits[e.name] = e.maxValue;
+        });
+
+        // 获取最大可能的增加值范围（用于枚举搜索）
+        const maxReasonableIncrement = Math.max(...failedCombinations.map(c => c.deficit));
+
+        // 检查给定增加值组合下的失败组合
+        function checkFailedCombosWithIncrements(increments) {
+          const stillFailed = [];
+          failedCombinations.forEach(combo => {
+            let sum = 0;
+            combo.elements.forEach(e => {
+              sum += currentValues[e.name] + (increments[e.name] || 0);
+            });
+            if (sum < target) {
+              stillFailed.push({
+                ...combo,
+                currentSum: sum,
+                deficit: target - sum
+              });
+            }
+          });
+          return stillFailed;
+        }
+
+        // 验证增加值是否满足最大值限制
+        function isValidIncrements(increments) {
+          for (const [name, inc] of Object.entries(increments)) {
+            if (inc < 0) return false;
+            if (maxLimits[name] !== null && currentValues[name] + inc > maxLimits[name]) {
+              return false;
+            }
+          }
+          return true;
+        }
+
+        // 计算总增加值
+        function getTotalIncrement(increments) {
+          return Object.values(increments).reduce((sum, val) => sum + val, 0);
+        }
+
+        // 初始化最优解
+        let bestSolution = null;
+        let minTotalIncrement = Infinity;
+
+        // 方法1：智能枚举搜索（针对小规模问题）
+        function intelligentEnumeration() {
+          const elementNames = elements.map(e => e.name);
+          const maxIncrements = elementNames.map(name => {
+            if (maxLimits[name] !== null) {
+              return Math.min(maxReasonableIncrement, maxLimits[name] - currentValues[name]);
+            }
+            return maxReasonableIncrement; // 无最大值限制时使用完整搜索范围
+          });
+
+          // 优先搜索较小的总增加值
+          for (let totalInc = 0; totalInc <= maxReasonableIncrement && totalInc < minTotalIncrement; totalInc++) {
+            // 生成所有可能的增加值组合，总和为totalInc
+            function generateCombinations(remaining, index, current) {
+              if (index === elementNames.length) {
+                if (remaining === 0) {
+                  const increments = {};
+                  elementNames.forEach((name, i) => {
+                    increments[name] = current[i];
+                  });
+
+                  if (isValidIncrements(increments)) {
+                    const failed = checkFailedCombosWithIncrements(increments);
+                    if (failed.length === 0) {
+                      const total = getTotalIncrement(increments);
+                      if (total < minTotalIncrement) {
+                        minTotalIncrement = total;
+                        bestSolution = {
+                          increments: { ...increments },
+                          totalIncrement: total,
+                          failedCount: 0,
+                          method: 'intelligent_enumeration'
+                        };
+                      }
+                    }
+                  }
+                }
+                return;
+              }
+
+              const maxForThis = Math.min(remaining, maxIncrements[index]);
+              for (let i = 0; i <= maxForThis; i++) {
+                current[index] = i;
+                generateCombinations(remaining - i, index + 1, current);
+                if (bestSolution && bestSolution.failedCount === 0) {
+                  return; // 已找到最优解，提前退出
+                }
+              }
+            }
+
+            generateCombinations(totalInc, 0, new Array(elementNames.length));
+            if (bestSolution && bestSolution.failedCount === 0) {
+              break; // 找到最优解，退出
+            }
+          }
+        }
+
+        // 方法2：改进的贪心算法（作为备选）
+        function improvedGreedy() {
+          const increments = {};
+          elements.forEach(e => {
+            increments[e.name] = 0;
+          });
+
+          let stillFailed = checkFailedCombosWithIncrements(increments);
+          const maxIterations = 100;
+          let iterations = 0;
+
+          while (stillFailed.length > 0 && iterations < maxIterations) {
+            iterations++;
+
+            // 计算每个元素的边际效益（每增加1点能解决的组合数）
+            let bestChoice = null;
+            let maxBenefit = 0;
+
+            elements.forEach(element => {
+              const name = element.name;
+              const currentTotal = currentValues[name] + increments[name];
+
+              // 检查是否可以增加
+              if (maxLimits[name] !== null && currentTotal >= maxLimits[name]) {
+                return;
+              }
+
+              // 计算增加1点的效益
+              const testIncrements = { ...increments };
+              testIncrements[name]++;
+              const newFailed = checkFailedCombosWithIncrements(testIncrements);
+              const benefit = stillFailed.length - newFailed.length;
+
+              if (benefit > maxBenefit) {
+                maxBenefit = benefit;
+                bestChoice = name;
+              }
+            });
+
+            // 如果没有找到有效益的选择，但还有失败组合，强制选择一个可以增加的元素
+            if (!bestChoice && stillFailed.length > 0) {
+              // 选择在失败组合中出现最多的元素
+              const elementCounts = {};
+              elements.forEach(e => {
+                elementCounts[e.name] = 0;
+              });
+
+              stillFailed.forEach(combo => {
+                combo.elements.forEach(e => {
+                  const currentTotal = currentValues[e.name] + increments[e.name];
+                  // 只统计可以增加的元素
+                  if (maxLimits[e.name] === null || currentTotal < maxLimits[e.name]) {
+                    elementCounts[e.name]++;
+                  }
+                });
+              });
+
+              // 找到出现次数最多的可增加元素
+              let maxCount = 0;
+              Object.keys(elementCounts).forEach(name => {
+                if (elementCounts[name] > maxCount) {
+                  maxCount = elementCounts[name];
+                  bestChoice = name;
+                }
+              });
+            }
+
+            if (!bestChoice) {
+              break; // 真的无法继续了
+            }
+
+            increments[bestChoice]++;
+            stillFailed = checkFailedCombosWithIncrements(increments);
+          }
+
+          // 精细优化
+          let optimized = true;
+          while (optimized) {
+            optimized = false;
+            Object.keys(increments).forEach(name => {
+              if (increments[name] > 0) {
+                increments[name]--;
+                const testFailed = checkFailedCombosWithIncrements(increments);
+                if (testFailed.length > 0) {
+                  increments[name]++;
+                } else {
+                  optimized = true;
+                }
+              }
+            });
+          }
+
+          const finalFailed = checkFailedCombosWithIncrements(increments);
+          const total = getTotalIncrement(increments);
+
+          if (total < minTotalIncrement) {
+            minTotalIncrement = total;
+            bestSolution = {
+              increments: { ...increments },
+              totalIncrement: total,
+              failedCount: finalFailed.length,
+              method: 'improved_greedy'
+            };
+          }
+        }
+
+        // 简单贪心算法作为最后保底
+        function simpleGreedyFallback() {
+          const increments = {};
+          elements.forEach(e => {
+            increments[e.name] = 0;
+          });
+
+          // 直接计算每个失败组合需要的最小增加值
+          failedCombinations.forEach(combo => {
+            const currentSum = combo.elements.reduce((sum, e) => {
+              return sum + currentValues[e.name] + increments[e.name];
+            }, 0);
+
+            if (currentSum < target) {
+              const deficit = target - currentSum;
+              // 平均分配到组合中的每个元素
+              const avgIncrease = Math.ceil(deficit / combo.elements.length);
+              combo.elements.forEach(e => {
+                // 检查最大值限制
+                const currentTotal = currentValues[e.name] + increments[e.name];
+                if (maxLimits[e.name] === null || currentTotal + avgIncrease <= maxLimits[e.name]) {
+                  increments[e.name] += avgIncrease;
+                }
+              });
+            }
+          });
+
+          const finalFailed = checkFailedCombosWithIncrements(increments);
+          return {
+            increments: { ...increments },
+            totalIncrement: getTotalIncrement(increments),
+            failedCount: finalFailed.length,
+            method: 'simple_greedy_fallback'
+          };
+        }
+
+        // 记录初始失败组合数
+        const initialFailedCombos = checkFailedCombosWithIncrements({});
+
+        // 根据问题规模选择算法
+        if (maxReasonableIncrement <= 25 && elements.length <= 7) {
+          // 小中规模问题：使用智能枚举
+          intelligentEnumeration();
+        }
+
+        // 总是运行改进的贪心算法作为备选
+        improvedGreedy();
+
+        // 如果智能枚举和改进贪心都没找到完美解，使用简单贪心保底
+        if (!bestSolution || bestSolution.failedCount > 0) {
+          const simpleGreedySolution = simpleGreedyFallback();
+          if (simpleGreedySolution.failedCount < (bestSolution ? bestSolution.failedCount : Infinity)) {
+            bestSolution = simpleGreedySolution;
+          }
+        }
+
+        // 如果没有找到解，返回原始的贪心结果
+        if (!bestSolution) {
+          bestSolution = {
+            increments: {},
+            totalIncrement: 0,
+            failedCount: initialFailedCombos.length,
+            method: 'no_solution'
+          };
+          elements.forEach(e => {
+            bestSolution.increments[e.name] = 0;
+          });
+        }
+
+        // 构建详细的失败组合信息
+        const finalFailedCombos = checkFailedCombosWithIncrements(bestSolution.increments);
+        const failedDetails = finalFailedCombos.map(combo => {
+          const names = combo.elements.map(e => e.name).join('+');
+          const values = combo.elements.map(e => {
+            const inc = bestSolution.increments[e.name] || 0;
+            const newVal = e.value + inc;
+            return inc > 0 ? `${e.name}(${e.value}→${newVal})` : `${e.name}(${e.value})`;
+          }).join(' + ');
+          return {
+            names: names,
+            values: values,
+            currentSum: combo.currentSum,
+            deficit: combo.deficit,
+            originalDeficit: combo.deficit
+          };
+        });
+
+        return {
+          increments: bestSolution.increments,
+          totalIncrement: bestSolution.totalIncrement,
+          failedCount: bestSolution.failedCount,
+          initialFailedCount: initialFailedCombos.length,
+          failedDetails: failedDetails,
+          hasMaxLimitIssue: bestSolution.failedCount > 0,
+          method: bestSolution.method
+        };
+      }
+
+      // 寻找最优解
+      const optimalSolution = findOptimalSolution();
+
+      // 显示最优方案
+      if (optimalSolution.totalIncrement > 0 || optimalSolution.failedCount > 0) {
+        const suggestion = document.createElement('div');
+        suggestion.className = 'optimization-suggestion';
+
+        // 构建调整方案文本
+        const adjustments = [];
+        Object.keys(optimalSolution.increments).forEach(name => {
+          if (optimalSolution.increments[name] > 0) {
+            const element = elements.find(e => e.name === name);
+            adjustments.push(`${name}: ${element.value} → ${element.value + optimalSolution.increments[name]} (+${optimalSolution.increments[name]})`);
+          }
+        });
+
+        // 检查是否有元素达到最大值限制
+        const limitedElements = [];
+        Object.keys(optimalSolution.increments).forEach(name => {
+          const element = elements.find(e => e.name === name);
+          if (element.maxValue !== null) {
+            const newValue = element.value + optimalSolution.increments[name];
+            if (newValue >= element.maxValue) {
+              limitedElements.push(`${name}(已达最大值${element.maxValue})`);
+            }
+          }
+        });
+
+        // 构建HTML内容
+        let htmlContent = `<strong>💡 最优化方案（最小增加值方案）：</strong><br>`;
+
+        // 显示初始失败情况
+        htmlContent += `初始状态：<strong>${optimalSolution.initialFailedCount} 个组合未达标</strong><br><br>`;
+
+        if (adjustments.length > 0) {
+          htmlContent += `调整方案：<br>${adjustments.map(a => `• ${a}`).join('<br>')}<br>`;
+          htmlContent += `<strong>总增加值：${optimalSolution.totalIncrement}</strong><br>`;
+        } else if (optimalSolution.failedCount > 0) {
+          htmlContent += `<strong>⚠️ 无法通过增加元素值来满足所有组合（可能受最大值限制）</strong><br>`;
+        }
+
+        if (limitedElements.length > 0) {
+          htmlContent += `⚠️ 达到最大值限制：${limitedElements.join('、')}<br>`;
+        }
+
+        htmlContent += `<br>优化后效果：<strong>${optimalSolution.failedCount === 0 ?
+          '✅ 所有组合都达到目标值' :
+          `❌ 仍有 ${optimalSolution.failedCount} 个组合无法达标`}</strong><br>`;
+
+        // 如果仍有失败的组合，详细列出
+        if (optimalSolution.failedCount > 0 && optimalSolution.failedDetails) {
+          htmlContent += `<br><strong>无法达标的组合详情：</strong><br>`;
+          htmlContent += '<div style="background-color: #fff3cd; padding: 10px; border-radius: 4px; margin-top: 10px;">';
+          optimalSolution.failedDetails.forEach((detail, index) => {
+            htmlContent += `${index + 1}. ${detail.values}<br>`;
+            htmlContent += `   当前和: ${detail.currentSum}, 还差: ${detail.deficit}<br>`;
+          });
+          htmlContent += '</div>';
+
+          // 计算需要的最小增加值
+          const minNeededIncrement = Math.min(...optimalSolution.failedDetails.map(d => d.deficit));
+          htmlContent += `<br><strong>💡 建议：</strong>这些组合至少还需要增加 <strong>${minNeededIncrement}</strong> 点才能全部达标。`;
+
+          // 如果有最大值限制，提示用户
+          if (limitedElements.length > 0) {
+            htmlContent += `<br>由于部分元素已达到最大值限制，可能需要调整最大值设置或接受部分组合无法达标。`;
+          }
+        }
+
+        suggestion.innerHTML = htmlContent;
+        analysisSection.appendChild(suggestion);
+      } else if (failedCombinations.length === 0) {
+        const noSolution = document.createElement('div');
+        noSolution.className = 'optimization-suggestion';
+        noSolution.innerHTML = '<strong>✅ 当前配置已满足所有组合要求，无需优化</strong>';
+        analysisSection.appendChild(noSolution);
+      } else {
+        const noSolution = document.createElement('div');
+        noSolution.className = 'optimization-suggestion';
+        noSolution.innerHTML = '<strong>⚠️ 未找到有效的优化方案</strong>';
+        analysisSection.appendChild(noSolution);
+      }
+
+      // 添加总结
+      const summary = document.createElement('div');
+      summary.style.marginTop = '15px';
+      summary.style.padding = '10px';
+      summary.style.backgroundColor = '#f8f9fa';
+      summary.style.borderRadius = '4px';
+
+      const highestFailElement = sortedElements[0];
+      const failurePercentage = (highestFailElement.failureRatio * 100).toFixed(1);
+
+      // 构建最优方案总结
+      let optimalSummary = '';
+      if (optimalSolution && optimalSolution.totalIncrement > 0) {
+        const changedElements = [];
+        Object.keys(optimalSolution.increments).forEach(name => {
+          if (optimalSolution.increments[name] > 0) {
+            changedElements.push(`${name}+${optimalSolution.increments[name]}`);
+          }
+        });
+        optimalSummary = `调整 ${changedElements.join('、')}，总增加值 ${optimalSolution.totalIncrement}`;
+        if (optimalSolution.failedCount === 0) {
+          optimalSummary += '（所有组合达标）';
+        } else {
+          optimalSummary += `（仍有${optimalSolution.failedCount}个组合未达标）`;
+        }
+      } else if (failedCombinations.length === 0) {
+        optimalSummary = '当前配置已满足所有要求';
+      } else if (optimalSolution.failedCount > 0) {
+        optimalSummary = `无法通过增加使所有组合达标（${optimalSolution.failedCount}个组合受限）`;
+      } else {
+        optimalSummary = '需要较大幅度调整';
+      }
+
+      summary.innerHTML = `
+        <strong>📝 分析总结：</strong><br>
+        • 共有 <strong>${failedCombinations.length}</strong> 个失败组合<br>
+        • <strong>${highestFailElement.name}</strong> 失败比例最高（${failurePercentage}%，${highestFailElement.failureCount}/${highestFailElement.totalCount}次）<br>
+        • 最优方案：${optimalSummary}
+      `;
+      analysisSection.appendChild(summary);
+
+      // 添加算法说明
+      const algorithmNote = document.createElement('div');
+      algorithmNote.style.marginTop = '10px';
+      algorithmNote.style.padding = '8px';
+      algorithmNote.style.backgroundColor = '#e7f3ff';
+      algorithmNote.style.borderRadius = '4px';
+      algorithmNote.style.fontSize = '0.9em';
+      algorithmNote.style.color = '#666';
+      algorithmNote.innerHTML = `
+        <strong>📌 算法说明：</strong><br>
+        • 本方案采用改进的最小增加值优化算法（使用了${optimalSolution.method === 'intelligent_enumeration' ? '智能枚举搜索' : '改进贪心算法'}）<br>
+        • 目标：找到真正的全局最优解，使所有组合都达到目标值且总增加值最小<br>
+        • 智能枚举：对小规模问题进行完全搜索，保证找到最优解<br>
+        • 改进贪心：基于边际效益分析，比原算法更精确<br>
+        • 约束处理：严格遵守最大值限制，确保方案可行
+      `;
+      analysisSection.appendChild(algorithmNote);
+
+      analysisContainer.appendChild(analysisSection);
+    }
+  </script>
+
+</body>
+
+</html>
