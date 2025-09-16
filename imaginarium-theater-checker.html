@@ -4,6 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <title>元素数值组合分析器 (自定义目标版)</title>
+  <!-- html2canvas CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -657,6 +659,13 @@
       const analysisContainer = document.getElementById('analysis-container');
       analysisContainer.innerHTML = ''; // 清空上次分析结果
 
+      // 清理之前的算法说明和下载按钮
+      const container = document.querySelector('.container');
+      const oldAlgorithmNote = container.querySelector('div[style*="background-color: #e7f3ff"]');
+      const oldDownloadBtn = container.querySelector('div[style*="text-align: center"][style*="margin-top: 30px"]');
+      if (oldAlgorithmNote) container.removeChild(oldAlgorithmNote);
+      if (oldDownloadBtn) container.removeChild(oldDownloadBtn);
+
       // 2. 验证目标和值是否有效
       if (isNaN(target)) {
         const li = document.createElement('li');
@@ -877,15 +886,87 @@
       });
 
       // 生成两份分析报告
-      if (failedCombinationsNormal.length > 0) {
-        // 第一份：不包含特殊组合的分析
+      if (specialCombinations.length > 0) {
+        // 有特殊组合时：显示两个报告
+        generateAnalysis(elements, failedCombinationsNormal, elementFailureCountNormal, elementTotalCountNormal, target, '（不含风岩、风草、岩草组合）');
+        generateAnalysis(elements, failedCombinations, elementFailureCount, elementTotalCount, target, '（包含所有组合）');
+      } else {
+        // 没有特殊组合时：只显示普通组合分析
         generateAnalysis(elements, failedCombinationsNormal, elementFailureCountNormal, elementTotalCountNormal, target, '（不含风岩、风草、岩草组合）');
       }
 
-      if (failedCombinations.length > 0 && specialCombinations.length > 0) {
-        // 第二份：包含所有组合的分析
-        generateAnalysis(elements, failedCombinations, elementFailureCount, elementTotalCount, target, '（包含所有组合）');
-      }
+      // 在报告区域外添加算法说明和下载按钮
+      addAlgorithmNote();
+      addDownloadButton();
+    }
+
+    // 添加算法说明（在报告区域外）
+    function addAlgorithmNote() {
+      const container = document.querySelector('.container');
+
+      const algorithmNote = document.createElement('div');
+      algorithmNote.style.marginTop = '30px';
+      algorithmNote.style.padding = '20px';
+      algorithmNote.style.backgroundColor = '#e7f3ff';
+      algorithmNote.style.borderRadius = '15px';
+      algorithmNote.style.fontSize = '0.95em';
+      algorithmNote.style.color = '#666';
+      algorithmNote.style.border = '2px solid rgba(102, 126, 234, 0.1)';
+      algorithmNote.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.05)';
+
+      // 获取最后一次运行的算法信息
+      // 这里我们需要从最近的优化结果中获取方法信息
+      algorithmNote.innerHTML = `
+        <strong>📌 算法说明：</strong><br>
+        • 本方案采用改进的最小增加值优化算法<br>
+        • 目标：找到真正的全局最优解，使所有组合都达到目标值且总增加值最小<br>
+        • 智能枚举：对小规模问题进行完全搜索，保证找到最优解<br>
+        • 改进贪心：基于边际效益分析，比原算法更精确<br>
+        • 约束处理：严格遵守最大值限制，确保方案可行
+      `;
+
+      container.appendChild(algorithmNote);
+    }
+
+    // 添加下载按钮到分析容器
+    function addDownloadButton() {
+      const container = document.querySelector('.container');
+      const analysisContainer = document.getElementById('analysis-container');
+
+      const downloadContainer = document.createElement('div');
+      downloadContainer.style.textAlign = 'center';
+      downloadContainer.style.marginTop = '30px';
+      downloadContainer.style.padding = '20px';
+
+      const downloadBtn = document.createElement('button');
+      downloadBtn.textContent = '📸 下载分析报告长图';
+      downloadBtn.style.padding = '12px 24px';
+      downloadBtn.style.fontSize = '1.1em';
+      downloadBtn.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+      downloadBtn.style.color = 'white';
+      downloadBtn.style.border = 'none';
+      downloadBtn.style.borderRadius = '12px';
+      downloadBtn.style.cursor = 'pointer';
+      downloadBtn.style.boxShadow = '0 4px 15px rgba(40, 167, 69, 0.3)';
+      downloadBtn.style.transition = 'all 0.3s ease';
+      downloadBtn.style.fontWeight = '600';
+
+      downloadBtn.onmouseover = function() {
+        this.style.transform = 'translateY(-3px)';
+        this.style.boxShadow = '0 6px 20px rgba(40, 167, 69, 0.4)';
+      };
+      downloadBtn.onmouseout = function() {
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = '0 4px 15px rgba(40, 167, 69, 0.3)';
+      };
+
+      downloadBtn.onclick = function() {
+        // 只下载分析报告区域，不包括算法说明和按钮
+        generateReportImage(analysisContainer, '分析报告');
+      };
+
+      downloadContainer.appendChild(downloadBtn);
+      container.appendChild(downloadContainer);
     }
 
     function generateAnalysis(elements, failedCombinations, elementFailureCount, elementTotalCount, target, reportType = '') {
@@ -897,20 +978,57 @@
 
       // 添加标题
       const title = document.createElement('h3');
-      title.textContent = `📊 失败组合分析报告 ${reportType}`;
+      if (failedCombinations.length === 0) {
+        title.textContent = `📊 组合分析报告 ${reportType}`;
+      } else {
+        title.textContent = `📊 失败组合分析报告 ${reportType}`;
+      }
       analysisSection.appendChild(title);
 
       // 1. 元素失败比例统计
       const freqTitle = document.createElement('h4');
-      freqTitle.textContent = '1. 元素失败比例分析：';
+      if (failedCombinations.length === 0) {
+        freqTitle.textContent = '1. 元素统计分析：';
+      } else {
+        freqTitle.textContent = '1. 元素失败比例分析：';
+      }
       analysisSection.appendChild(freqTitle);
+
+      if (failedCombinations.length === 0) {
+        // 如果没有失败组合，显示成功提示
+        const successMsg = document.createElement('div');
+        successMsg.style.padding = '20px';
+        successMsg.style.backgroundColor = '#d4edda';
+        successMsg.style.border = '2px solid #c3e6cb';
+        successMsg.style.borderRadius = '10px';
+        successMsg.style.color = '#155724';
+        successMsg.style.textAlign = 'center';
+        successMsg.style.fontSize = '1.2em';
+        successMsg.style.fontWeight = 'bold';
+        successMsg.innerHTML = '🎉 恭喜！当前配置下所有组合都能达到目标值，无需优化！';
+        analysisSection.appendChild(successMsg);
+
+        // 仍然显示元素统计表格
+        const statsNote = document.createElement('div');
+        statsNote.style.marginTop = '15px';
+        statsNote.style.padding = '10px';
+        statsNote.style.backgroundColor = '#f8f9fa';
+        statsNote.style.borderRadius = '5px';
+        statsNote.style.fontSize = '0.9em';
+        statsNote.innerHTML = '<strong>📊 元素统计概览：</strong>';
+        analysisSection.appendChild(statsNote);
+      }
 
       // 创建频率表格
       const table = document.createElement('table');
       table.className = 'frequency-table';
 
       const thead = document.createElement('thead');
-      thead.innerHTML = '<tr><th>元素</th><th>当前值</th><th>总出现次数</th><th>失败次数</th><th>失败比例</th><th>失败比例排名</th></tr>';
+      if (failedCombinations.length === 0) {
+        thead.innerHTML = '<tr><th>元素</th><th>当前值</th><th>总出现次数</th><th>成功次数</th><th>成功比例</th><th>成功比例排名</th></tr>';
+      } else {
+        thead.innerHTML = '<tr><th>元素</th><th>当前值</th><th>总出现次数</th><th>失败次数</th><th>失败比例</th><th>失败比例排名</th></tr>';
+      }
       table.appendChild(thead);
 
       const tbody = document.createElement('tbody');
@@ -922,15 +1040,23 @@
           const failureCount = entry[1];
           const totalCount = elementTotalCount[name];
           const failureRatio = totalCount > 0 ? (failureCount / totalCount) : 0;
+          const successRatio = totalCount > 0 ? ((totalCount - failureCount) / totalCount) : 0;
           return {
             name: name,
             failureCount: failureCount,
             totalCount: totalCount,
             failureRatio: failureRatio,
+            successRatio: successRatio,
             value: elements.find(e => e.name === name).value
           };
         })
-        .sort((a, b) => b.failureRatio - a.failureRatio)
+        .sort((a, b) => {
+          if (failedCombinations.length === 0) {
+            return b.successRatio - a.successRatio; // 按成功率降序排列
+          } else {
+            return b.failureRatio - a.failureRatio; // 按失败率降序排列
+          }
+        })
         .map((elem, index) => ({
           ...elem,
           rank: index + 1
@@ -940,18 +1066,36 @@
 
       sortedElements.forEach(elem => {
         const row = document.createElement('tr');
-        if (elem.rank === 1) {
-          row.style.backgroundColor = '#fff3cd';
+        if (elem.rank === 1 && failedCombinations.length === 0) {
+          row.style.backgroundColor = '#d4edda'; // 成功时用绿色
+        } else if (elem.rank === 1) {
+          row.style.backgroundColor = '#fff3cd'; // 失败时用黄色
         }
-        const percentageStr = (elem.failureRatio * 100).toFixed(1);
-        row.innerHTML = `
-          <td><strong>${elem.name}</strong></td>
-          <td>${elem.value}</td>
-          <td>${elem.totalCount}</td>
-          <td>${elem.failureCount}</td>
-          <td>${percentageStr}%</td>
-          <td>${elem.rank === 1 ? '🥇 第一' : elem.rank === 2 ? '🥈 第二' : elem.rank === 3 ? '🥉 第三' : `第${elem.rank}`}</td>
-        `;
+
+        if (failedCombinations.length === 0) {
+          // 显示成功率
+          const successCount = elem.totalCount - elem.failureCount;
+          const percentageStr = (elem.successRatio * 100).toFixed(1);
+          row.innerHTML = `
+            <td><strong>${elem.name}</strong></td>
+            <td>${elem.value}</td>
+            <td>${elem.totalCount}</td>
+            <td>${successCount}</td>
+            <td>${percentageStr}%</td>
+            <td>${elem.rank === 1 ? '🥇 第一' : elem.rank === 2 ? '🥈 第二' : elem.rank === 3 ? '🥉 第三' : `第${elem.rank}`}</td>
+          `;
+        } else {
+          // 显示失败率
+          const percentageStr = (elem.failureRatio * 100).toFixed(1);
+          row.innerHTML = `
+            <td><strong>${elem.name}</strong></td>
+            <td>${elem.value}</td>
+            <td>${elem.totalCount}</td>
+            <td>${elem.failureCount}</td>
+            <td>${percentageStr}%</td>
+            <td>${elem.rank === 1 ? '🥇 第一' : elem.rank === 2 ? '🥈 第二' : elem.rank === 3 ? '🥉 第三' : `第${elem.rank}`}</td>
+          `;
+        }
         tbody.appendChild(row);
       });
 
@@ -1396,30 +1540,141 @@
       summary.innerHTML = `
         <strong>📝 分析总结：</strong><br>
         • 共有 <strong>${failedCombinations.length}</strong> 个失败组合<br>
-        • <strong>${highestFailElement.name}</strong> 失败比例最高（${failurePercentage}%，${highestFailElement.failureCount}/${highestFailElement.totalCount}次）<br>
+        ${failurePercentage > 0 ? `• <strong>${highestFailElement.name}</strong> 失败比例最高（${failurePercentage}%，${highestFailElement.failureCount}/${highestFailElement.totalCount}次）<br>` : ''}
         • 最优方案：${optimalSummary}
       `;
       analysisSection.appendChild(summary);
 
-      // 添加算法说明
-      const algorithmNote = document.createElement('div');
-      algorithmNote.style.marginTop = '10px';
-      algorithmNote.style.padding = '8px';
-      algorithmNote.style.backgroundColor = '#e7f3ff';
-      algorithmNote.style.borderRadius = '4px';
-      algorithmNote.style.fontSize = '0.9em';
-      algorithmNote.style.color = '#666';
-      algorithmNote.innerHTML = `
-        <strong>📌 算法说明：</strong><br>
-        • 本方案采用改进的最小增加值优化算法（使用了${optimalSolution.method === 'intelligent_enumeration' ? '智能枚举搜索' : '改进贪心算法'}）<br>
-        • 目标：找到真正的全局最优解，使所有组合都达到目标值且总增加值最小<br>
-        • 智能枚举：对小规模问题进行完全搜索，保证找到最优解<br>
-        • 改进贪心：基于边际效益分析，比原算法更精确<br>
-        • 约束处理：严格遵守最大值限制，确保方案可行
-      `;
-      analysisSection.appendChild(algorithmNote);
-
       analysisContainer.appendChild(analysisSection);
+    }
+
+    // 生成报告长图功能
+    function generateReportImage(element, reportType) {
+      // 检查html2canvas是否加载
+      if (typeof html2canvas === 'undefined') {
+        alert('图片生成库加载失败，请刷新页面重试');
+        return;
+      }
+
+      // 显示加载状态
+      const loadingOverlay = document.createElement('div');
+      loadingOverlay.style.position = 'fixed';
+      loadingOverlay.style.top = '0';
+      loadingOverlay.style.left = '0';
+      loadingOverlay.style.width = '100%';
+      loadingOverlay.style.height = '100%';
+      loadingOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+      loadingOverlay.style.display = 'flex';
+      loadingOverlay.style.justifyContent = 'center';
+      loadingOverlay.style.alignItems = 'center';
+      loadingOverlay.style.zIndex = '9999';
+      loadingOverlay.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+          <div style="font-size: 2em; margin-bottom: 15px;">📸</div>
+          <div style="font-size: 1.2em; color: #333; margin-bottom: 10px;">正在生成报告长图...</div>
+          <div style="font-size: 0.9em; color: #666;">请稍候</div>
+        </div>
+      `;
+      document.body.appendChild(loadingOverlay);
+
+      // 使用html2canvas生成图片
+      html2canvas(element, {
+        scale: 2, // 提高清晰度
+        useCORS: true, // 允许跨域
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: element.scrollWidth,
+        height: element.scrollHeight,
+        scrollX: 0,
+        scrollY: 0
+      }).then(canvas => {
+        // 添加水印
+        addWatermarkToCanvas(canvas);
+
+        // 下载图片
+        downloadCanvasAsImage(canvas, reportType);
+
+        // 移除加载状态
+        document.body.removeChild(loadingOverlay);
+
+        // 显示成功提示
+        showSuccessMessage('报告长图已生成并下载！');
+      }).catch(error => {
+        console.error('生成图片失败:', error);
+        document.body.removeChild(loadingOverlay);
+        alert('生成图片失败，请稍后重试');
+      });
+    }
+
+    // 在Canvas上添加水印
+    function addWatermarkToCanvas(canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.save();
+
+      // 设置水印样式
+      ctx.globalAlpha = 0.1;
+      ctx.fillStyle = '#666666';
+      ctx.font = '28px Arial';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'bottom';
+
+      // 绘制水印
+      ctx.fillText('元素数值组合分析器', canvas.width - 40, canvas.height - 40);
+
+      ctx.restore();
+    }
+
+    // 下载Canvas为图片
+    function downloadCanvasAsImage(canvas, reportType) {
+      // 转换为blob
+      canvas.toBlob(function(blob) {
+        // 创建下载链接
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+
+        // 设置文件名
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const fileName = `元素分析报告_${reportType.replace(/[()（）]/g, '')}_${timestamp}.png`;
+        link.download = fileName;
+
+        // 触发下载
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // 清理URL
+        URL.revokeObjectURL(url);
+      }, 'image/png', 0.95);
+    }
+
+    // 显示成功提示
+    function showSuccessMessage(message) {
+      const toast = document.createElement('div');
+      toast.style.position = 'fixed';
+      toast.style.top = '20px';
+      toast.style.right = '20px';
+      toast.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+      toast.style.color = 'white';
+      toast.style.padding = '15px 20px';
+      toast.style.borderRadius = '10px';
+      toast.style.boxShadow = '0 5px 15px rgba(40, 167, 69, 0.3)';
+      toast.style.zIndex = '10000';
+      toast.style.fontSize = '14px';
+      toast.style.fontWeight = '600';
+      toast.textContent = message;
+
+      document.body.appendChild(toast);
+
+      // 3秒后自动消失
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => {
+          document.body.removeChild(toast);
+        }, 300);
+      }, 3000);
     }
   </script>
 
