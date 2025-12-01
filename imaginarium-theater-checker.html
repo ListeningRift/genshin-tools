@@ -15,7 +15,7 @@
 
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #667eea;
       min-height: 100vh;
       padding: 20px;
       line-height: 1.6;
@@ -131,6 +131,33 @@
       transition: all 0.3s ease;
       position: relative;
       overflow: hidden;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .input-group.selected {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+      border-color: #667eea;
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+      transform: translateY(-3px);
+    }
+
+    .input-group.selected::after {
+      content: '✓';
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 30px;
+      height: 30px;
+      background: #667eea;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2em;
+      font-weight: bold;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
     }
 
     .input-group::before {
@@ -212,7 +239,7 @@
       padding: 15px 20px;
       font-size: 1.2em;
       font-weight: 600;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #667eea;
       color: white;
       border: none;
       border-radius: 15px;
@@ -474,6 +501,75 @@
         transform: rotate(360deg);
       }
     }
+
+    /* 筛选结果区域样式 */
+    #filter-section {
+      margin-top: 30px;
+      padding: 25px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 15px;
+      border: 2px solid rgba(102, 126, 234, 0.2);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(5px);
+      position: relative;
+      z-index: 1;
+    }
+
+    #filter-section h3 {
+      color: #333;
+      font-size: 1.4em;
+      font-weight: 600;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+    }
+
+    .filter-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .filter-controls button {
+      flex: 1;
+      min-width: 150px;
+      padding: 10px 15px;
+      font-size: 1em;
+      margin-bottom: 0;
+    }
+
+    .filter-hint {
+      padding: 15px;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+      border-radius: 10px;
+      color: #667eea;
+      font-size: 0.95em;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    #filter-result-list {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #filter-result-list li {
+      padding: 15px 20px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 10px;
+      margin-bottom: 10px;
+      transition: all 0.3s ease;
+      position: relative;
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    #filter-result-list li:hover {
+      transform: translateX(5px);
+      background: rgba(255, 255, 255, 0.8);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
   </style>
 </head>
 
@@ -494,6 +590,19 @@
     </div>
 
     <button onclick="generateReport()">📊 生成详细报告</button>
+
+    <!-- 筛选功能区域 -->
+    <div id="filter-section" style="display: none;">
+      <h3>🔍 筛选组合</h3>
+      <div class="filter-hint">
+        💡 点击上方元素卡片选择需要筛选的元素（已选择: <span id="selected-count">0</span> 个）
+      </div>
+      <div class="filter-controls">
+        <button onclick="filterCombinations()" style="background: linear-gradient(135deg, #667eea, #764ba2);">🔍 查看筛选结果</button>
+        <button onclick="clearSelection()" style="background: linear-gradient(135deg, #dc3545, #c82333);">🗑️ 清除选择</button>
+      </div>
+      <ul id="filter-result-list"></ul>
+    </div>
 
     <div style="text-align: center; margin: 20px 0;">
       <a href="index.html" style="
@@ -525,6 +634,9 @@
     const elementNames = ['水', '火', '雷', '风', '岩', '草', '冰'];
     const defaultValues = [0, 0, 0, 0, 0, 0, 0];
     const inputContainer = document.getElementById('input-container');
+
+    // 用于存储选中的元素索引
+    let selectedElements = new Set();
 
     // 页面加载动画
     document.addEventListener('DOMContentLoaded', function () {
@@ -586,10 +698,58 @@
       }
     }
 
+    // 切换元素选择状态
+    function toggleElementSelection(index) {
+      const group = document.getElementById(`element-group-${index}`);
+      if (selectedElements.has(index)) {
+        selectedElements.delete(index);
+        group.classList.remove('selected');
+      } else {
+        selectedElements.add(index);
+        group.classList.add('selected');
+      }
+      updateSelectedCount();
+
+      // 显示筛选区域
+      const filterSection = document.getElementById('filter-section');
+      if (selectedElements.size > 0) {
+        filterSection.style.display = 'block';
+      } else {
+        filterSection.style.display = 'none';
+      }
+    }
+
+    // 更新选中数量显示
+    function updateSelectedCount() {
+      document.getElementById('selected-count').textContent = selectedElements.size;
+    }
+
+    // 清除选择
+    function clearSelection() {
+      selectedElements.forEach(index => {
+        const group = document.getElementById(`element-group-${index}`);
+        group.classList.remove('selected');
+      });
+      selectedElements.clear();
+      updateSelectedCount();
+      document.getElementById('filter-section').style.display = 'none';
+      document.getElementById('filter-result-list').innerHTML = '';
+    }
+
     // 动态生成七个元素的输入框
     identifiers.forEach((name, index) => {
       const group = document.createElement('div');
       group.className = 'input-group';
+      group.id = `element-group-${index}`;
+
+      // 添加点击事件（但不包括输入框）
+      group.addEventListener('click', function(e) {
+        // 如果点击的是输入框，不触发选择
+        if (e.target.tagName === 'INPUT') {
+          return;
+        }
+        toggleElementSelection(index);
+      });
 
       const label = document.createElement('label');
       label.htmlFor = `element-${index}`;
@@ -603,6 +763,10 @@
       input.placeholder = '当前值';
       // 添加输入事件监听器
       input.addEventListener('input', saveToCache);
+      // 阻止输入框的点击事件冒泡
+      input.addEventListener('click', function(e) {
+        e.stopPropagation();
+      });
 
       const maxLabel = document.createElement('label');
       maxLabel.className = 'max-label';
@@ -616,6 +780,10 @@
       maxInput.placeholder = '不限制';
       // 添加输入事件监听器
       maxInput.addEventListener('input', saveToCache);
+      // 阻止输入框的点击事件冒泡
+      maxInput.addEventListener('click', function(e) {
+        e.stopPropagation();
+      });
 
       group.appendChild(label);
       group.appendChild(input);
@@ -626,6 +794,195 @@
 
     // 页面加载时恢复缓存数据
     window.addEventListener('DOMContentLoaded', loadFromCache);
+
+    // 筛选组合功能
+    function filterCombinations() {
+      if (selectedElements.size === 0) {
+        alert('请先选择至少一个元素！');
+        return;
+      }
+
+      // 读取目标和值
+      const targetInput = document.getElementById('target-sum-input');
+      const target = parseInt(targetInput.value, 10);
+
+      if (isNaN(target)) {
+        alert('请先设置有效的目标和值！');
+        return;
+      }
+
+      // 读取元素数值
+      const inputElements = document.querySelectorAll('.element-input');
+      const numbers = Array.from(inputElements).map(input => parseInt(input.value, 10));
+
+      if (numbers.some(isNaN)) {
+        alert('请确保所有元素都填写了有效的数值！');
+        return;
+      }
+
+      const elements = numbers.map((value, index) => ({
+        name: elementNames[index],
+        displayName: identifiers[index],
+        value: value
+      }));
+
+      // 将选中的元素索引转换为数组并排序
+      const selectedIndices = Array.from(selectedElements).sort((a, b) => a - b);
+
+      // 生成筛选结果
+      const filterResultList = document.getElementById('filter-result-list');
+      filterResultList.innerHTML = '';
+
+      let matchCount = 0;
+      let successCount = 0;
+      let failureCount = 0;
+
+      // 根据选中的元素数量决定如何筛选
+      if (selectedIndices.length === 1) {
+        // 只选了1个元素：显示包含该元素的所有三元组合
+        const selectedIndex = selectedIndices[0];
+        for (let i = 0; i < elements.length - 2; i++) {
+          for (let j = i + 1; j < elements.length - 1; j++) {
+            for (let k = j + 1; k < elements.length; k++) {
+              // 检查是否包含选中的元素
+              if (i === selectedIndex || j === selectedIndex || k === selectedIndex) {
+                matchCount++;
+                const elem1 = elements[i];
+                const elem2 = elements[j];
+                const elem3 = elements[k];
+                const sum = elem1.value + elem2.value + elem3.value;
+
+                const li = document.createElement('li');
+                let text = `${matchCount}. ${elem1.displayName}(${elem1.value}) + ${elem2.displayName}(${elem2.value}) + ${elem3.displayName}(${elem3.value}) = <strong>${sum}</strong>. `;
+
+                if (sum >= target) {
+                  li.className = 'success';
+                  text += `✅ 能`;
+                  successCount++;
+                } else {
+                  const deficit = target - sum;
+                  li.className = 'failure';
+                  text += `❌ 不能 (差 ${deficit})`;
+                  failureCount++;
+                }
+
+                li.innerHTML = text;
+                filterResultList.appendChild(li);
+              }
+            }
+          }
+        }
+      } else if (selectedIndices.length === 2) {
+        // 选了2个元素：显示包含这两个元素的所有三元组合
+        const idx1 = selectedIndices[0];
+        const idx2 = selectedIndices[1];
+        for (let k = 0; k < elements.length; k++) {
+          if (k !== idx1 && k !== idx2) {
+            matchCount++;
+            // 按索引顺序排列
+            const indices = [idx1, idx2, k].sort((a, b) => a - b);
+            const elem1 = elements[indices[0]];
+            const elem2 = elements[indices[1]];
+            const elem3 = elements[indices[2]];
+            const sum = elem1.value + elem2.value + elem3.value;
+
+            const li = document.createElement('li');
+            let text = `${matchCount}. ${elem1.displayName}(${elem1.value}) + ${elem2.displayName}(${elem2.value}) + ${elem3.displayName}(${elem3.value}) = <strong>${sum}</strong>. `;
+
+            if (sum >= target) {
+              li.className = 'success';
+              text += `✅ 能`;
+              successCount++;
+            } else {
+              const deficit = target - sum;
+              li.className = 'failure';
+              text += `❌ 不能 (差 ${deficit})`;
+              failureCount++;
+            }
+
+            li.innerHTML = text;
+            filterResultList.appendChild(li);
+          }
+        }
+      } else if (selectedIndices.length === 3) {
+        // 选了3个元素：只显示这个特定组合
+        matchCount = 1;
+        const elem1 = elements[selectedIndices[0]];
+        const elem2 = elements[selectedIndices[1]];
+        const elem3 = elements[selectedIndices[2]];
+        const sum = elem1.value + elem2.value + elem3.value;
+
+        const li = document.createElement('li');
+        let text = `${matchCount}. ${elem1.displayName}(${elem1.value}) + ${elem2.displayName}(${elem2.value}) + ${elem3.displayName}(${elem3.value}) = <strong>${sum}</strong>. `;
+
+        if (sum >= target) {
+          li.className = 'success';
+          text += `✅ 能`;
+          successCount++;
+        } else {
+          const deficit = target - sum;
+          li.className = 'failure';
+          text += `❌ 不能 (差 ${deficit})`;
+          failureCount++;
+        }
+
+        li.innerHTML = text;
+        filterResultList.appendChild(li);
+      } else {
+        // 选了4个或更多元素：显示所有包含这些元素的组合
+        for (let i = 0; i < elements.length - 2; i++) {
+          for (let j = i + 1; j < elements.length - 1; j++) {
+            for (let k = j + 1; k < elements.length; k++) {
+              // 检查是否所有选中的元素都在这个组合中
+              const comboIndices = [i, j, k];
+              const containsAll = selectedIndices.every(idx => comboIndices.includes(idx));
+
+              if (containsAll) {
+                matchCount++;
+                const elem1 = elements[i];
+                const elem2 = elements[j];
+                const elem3 = elements[k];
+                const sum = elem1.value + elem2.value + elem3.value;
+
+                const li = document.createElement('li');
+                let text = `${matchCount}. ${elem1.displayName}(${elem1.value}) + ${elem2.displayName}(${elem2.value}) + ${elem3.displayName}(${elem3.value}) = <strong>${sum}</strong>. `;
+
+                if (sum >= target) {
+                  li.className = 'success';
+                  text += `✅ 能`;
+                  successCount++;
+                } else {
+                  const deficit = target - sum;
+                  li.className = 'failure';
+                  text += `❌ 不能 (差 ${deficit})`;
+                  failureCount++;
+                }
+
+                li.innerHTML = text;
+                filterResultList.appendChild(li);
+              }
+            }
+          }
+        }
+      }
+
+      // 添加统计信息
+      if (matchCount === 0) {
+        const noResult = document.createElement('li');
+        noResult.style.textAlign = 'center';
+        noResult.style.color = '#999';
+        noResult.textContent = '没有找到匹配的组合';
+        filterResultList.appendChild(noResult);
+      } else {
+        const summary = document.createElement('li');
+        summary.style.background = 'linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1))';
+        summary.style.fontWeight = 'bold';
+        summary.style.textAlign = 'center';
+        summary.style.borderLeft = '4px solid #667eea';
+        summary.innerHTML = `📊 筛选结果统计：共 ${matchCount} 个组合，✅ 成功 ${successCount} 个，❌ 失败 ${failureCount} 个`;
+        filterResultList.insertBefore(summary, filterResultList.firstChild);
+      }
+    }
 
     function generateReport() {
       // 添加加载动画
